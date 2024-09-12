@@ -66,19 +66,16 @@
                     The pie chart represents the distribution of your budget across different categories.
                     
                 </p>
+                <canvas id="myChart" width="400" height="400" role="img" aria-label="Budget distribution pie chart showing various categories"></canvas>
             </article>
-
-           
 
             <article>
-                <h3>Chart</h3>
+                <h3>D3 Chart</h3>
                 <p>
-                    <canvas id="myChart" width="400" height="400" role="img" aria-label="Budget distribution pie chart showing various categories"></canvas>
-                    <canvas id="myChart" width="400" height="400"></canvas>
+                    The bar chart represents your budget data.
                 </p>
+                <div id="d3-chart"></div>
             </article>
-
-           
         </section>
     </main>
 
@@ -91,6 +88,7 @@
     <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.20.0/axios.min.js" integrity="sha512-quHCp3WbBNkwLfYUMd+KwBAgpVukJu5MncuQaWXgCrfgcxCJAq/fo+oqrRKOj+UKEmyMCG3tb8RB63W+EmrOBg==" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.min.js" integrity="sha512-s+xg36jbIujB2S2VKfpGmlC3T5V2TF3lY48DX7u2r9XzGzgPsa6wTpOQA7J9iffvdeBN0q9tKzRxVxw1JviZPg==" crossorigin="anonymous"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
     <script>
         var dataSource = {
             datasets: [
@@ -101,13 +99,20 @@
                         '#ff6384',
                         '#36a2eb',
                         '#fd6b19',
+                        '#008000',
+                        '#800080',
+                        '#FF0000'
                     ]
                 }
             ],
             labels: [
                 'Eat out',
                 'Rent',
-                'Groceries'
+                'Groceries',
+                'Transport',
+                'Entertainment',
+                'Utilities',
+                'Savings'
             ]
         };
 
@@ -119,21 +124,57 @@
             });
         }
         
+        function createD3Chart(data) {
+            var svg = d3.select("#d3-chart").append("svg")
+                .attr("width", 500)
+                .attr("height", 300);
+
+            var x = d3.scaleBand()
+                .domain(data.map(d => d.title))
+                .range([0, 500])
+                .padding(0.1);
+
+            var y = d3.scaleLinear()
+                .domain([0, d3.max(data, d => d.budget)])
+                .nice()
+                .range([300, 0]);
+
+            svg.selectAll(".bar")
+                .data(data)
+                .enter().append("rect")
+                .attr("class", "bar")
+                .attr("x", d => x(d.title))
+                .attr("y", d => y(d.budget))
+                .attr("width", x.bandwidth())
+                .attr("height", d => 300 - y(d.budget))
+                .attr("fill", "#36a2eb");
+
+            svg.append("g")
+                .attr("class", "x-axis")
+                .attr("transform", "translate(0,300)")
+                .call(d3.axisBottom(x));
+
+            svg.append("g")
+                .attr("class", "y-axis")
+                .call(d3.axisLeft(y));
+        }
 
         function getBudget() {
             axios.get('http://localhost:3000/budget')
             .then(function (res) {
-                for (var i = 0; i < res.data.myBudget.length; i++) {
-                    dataSource.datasets[0].data[i] = res.data.myBudget[i].budget;
-                    dataSource.labels[i] = res.data.myBudget[i].title;
-                    
+                var data = res.data.myBudget;
+                
+                for (var i = 0; i < data.length; i++) {
+                    dataSource.datasets[0].data[i] = data[i].budget;
+                    dataSource.labels[i] = data[i].title;
                 }
                 createChart();
+
+                createD3Chart(data);
             });
         }
 
         getBudget();
-        
     </script>
 </body>
 </html>
