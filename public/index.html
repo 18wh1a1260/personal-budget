@@ -12,6 +12,13 @@
     <!-- Stylesheets -->
     <link rel="stylesheet" href="reset.css">
     <link rel="stylesheet" href="main.css">
+    <style>
+        /* Add styling for the D3 chart labels */
+        #d3-chart .label {
+            font-size: 12px;
+            fill: #000; /* Color of the text */
+        }
+    </style>
 </head>
 <body>
 
@@ -64,7 +71,6 @@
                 <h3>Chart</h3>
                 <p>
                     The pie chart represents the distribution of your budget across different categories.
-                    
                 </p>
                 <canvas id="myChart" width="400" height="400" role="img" aria-label="Budget distribution pie chart showing various categories"></canvas>
             </article>
@@ -73,8 +79,8 @@
                 <h3>D3 Chart</h3>
                 <p>
                     The bar chart represents your budget data.
-                </p>
-                <div id="d3-chart"></div>
+                </p>   <br>
+                <div id="d3-chart"></div>  <br>
             </article>
         </section>
     </main>
@@ -105,15 +111,7 @@
                     ]
                 }
             ],
-            labels: [
-                'Eat out',
-                'Rent',
-                'Groceries',
-                'Transport',
-                'Entertainment',
-                'Utilities',
-                'Savings'
-            ]
+            labels: []
         };
 
         function createChart() {
@@ -123,53 +121,72 @@
                 data: dataSource
             });
         }
-        
+
         function createD3Chart(data) {
-            var svg = d3.select("#d3-chart").append("svg")
-                .attr("width", 500)
-                .attr("height", 300);
+            console.log(data);
 
-            var x = d3.scaleBand()
-                .domain(data.map(d => d.title))
-                .range([0, 500])
-                .padding(0.1);
+    var svg = d3.select("#d3-chart").append("svg")
+        .attr("width", 500)
+        .attr("height", 300)
+        .attr("viewBox", "0 0 500 300")
+        .attr("preserveAspectRatio", "xMidYMid meet");
 
-            var y = d3.scaleLinear()
-                .domain([0, d3.max(data, d => d.budget)])
-                .nice()
-                .range([300, 0]);
+    var x = d3.scaleBand()
+        .domain(data.map(d => d.title))
+        .range([0, 500])
+        .padding(0.1);
 
-            svg.selectAll(".bar")
-                .data(data)
-                .enter().append("rect")
-                .attr("class", "bar")
-                .attr("x", d => x(d.title))
-                .attr("y", d => y(d.budget))
-                .attr("width", x.bandwidth())
-                .attr("height", d => 300 - y(d.budget))
-                .attr("fill", "#36a2eb");
+    var y = d3.scaleLinear()
+        .domain([0, d3.max(data, d => d.budget)])
+        .nice()
+        .range([300, 0]);
 
-            svg.append("g")
-                .attr("class", "x-axis")
-                .attr("transform", "translate(0,300)")
-                .call(d3.axisBottom(x));
+    // Create bars
+    svg.selectAll(".bar")
+        .data(data)
+        .enter().append("rect")
+        .attr("class", "bar")
+        .attr("x", d => x(d.title))
+        .attr("y", d => y(d.budget))
+        .attr("width", x.bandwidth())
+        .attr("height", d => 300 - y(d.budget))
+        .attr("fill", "#36a2eb");
 
-            svg.append("g")
-                .attr("class", "y-axis")
-                .call(d3.axisLeft(y));
-        }
+    // Add x-axis
+    svg.append("g")
+        .attr("class", "x-axis")
+        .attr("transform", "translate(0,300)")
+        .call(d3.axisBottom(x));
+
+    // Add y-axis
+    svg.append("g")
+        .attr("class", "y-axis")
+        .call(d3.axisLeft(y));
+
+    // Add text labels on top of bars
+    svg.selectAll(".label")
+        .data(data)
+        .enter().append("text")
+        .attr("class", "label")
+        .attr("x", d => x(d.title) + x.bandwidth() / 2)  // Center the text horizontally
+        .attr("y", d => {
+            // Ensure label is positioned above the bar and within the SVG container
+            var labelY = y(d.budget) - 5;
+            return labelY < 9 ? 9 : labelY; // Adjust label position if it goes above the container
+        })
+        .attr("text-anchor", "middle") // Center text horizontally
+        .text(d => d.budget); // Display the budget value
+}
 
         function getBudget() {
             axios.get('http://localhost:3000/budget')
             .then(function (res) {
                 var data = res.data.myBudget;
-                
-                for (var i = 0; i < data.length; i++) {
-                    dataSource.datasets[0].data[i] = data[i].budget;
-                    dataSource.labels[i] = data[i].title;
-                }
-                createChart();
 
+                dataSource.datasets[0].data = data.map(d => d.budget);
+                dataSource.labels = data.map(d => d.title);
+                
+                createChart();
                 createD3Chart(data);
             });
         }
